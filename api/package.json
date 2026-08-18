@@ -1,0 +1,16 @@
+{
+  "name": "salesforce-lead-api",
+  "version": "1.0.0",
+  "description": "Salesforce Web-to-Lead API backend",
+  "private": true,
+  "main": "dist/lead/index.js",
+  "scripts": {
+    "build": "tsc",
+    "prestart": "npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@azure/functions": "^3.5.1",
+    "typescript": "^5.5.4"
+  }
+}
