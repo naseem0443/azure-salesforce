@@ -29,7 +29,8 @@ function sanitize(input: string): string {
   return input.replace(/<[^>]*>?/gm, "").trim();
 }
 
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const EMAIL_REGEX =
+  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -41,7 +42,10 @@ function getRequiredEnv(name: string): string {
   return value.trim();
 }
 
-function jsonResponse(status: number, body: Record<string, unknown>) {
+function jsonResponse(
+  status: number,
+  body: Record<string, unknown>
+) {
   return {
     status,
     headers: {
@@ -61,44 +65,59 @@ export default async function (
   // 1. POST only
   if (req.method !== "POST") {
     context.log.warn(`[API] Invalid method: ${req.method}.`);
+
     context.res = jsonResponse(405, {
       success: false,
       message: "Method Not Allowed. Only POST is supported.",
     });
+
     return;
   }
 
   // 2. JSON only
   const contentType = req.headers["content-type"] || "";
+
   if (!contentType.toLowerCase().startsWith("application/json")) {
     context.log.warn(`[API] Invalid Content-Type: ${contentType}.`);
+
     context.res = jsonResponse(415, {
       success: false,
       message: "Unsupported Media Type. Request body must be JSON.",
     });
+
     return;
   }
 
   try {
     // 3. Request-size protection
     const rawBody = req.rawBody || "";
+
     if (rawBody.length > 50_000) {
-      context.log.warn(`[API] Payload too large: ${rawBody.length} bytes.`);
+      context.log.warn(
+        `[API] Payload too large: ${rawBody.length} bytes.`
+      );
+
       context.res = jsonResponse(413, {
         success: false,
         message: "Payload Too Large. Request size exceeds limit.",
       });
+
       return;
     }
 
     // 4. Validate request body
     const body = req.body;
 
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body)
+    ) {
       context.res = jsonResponse(400, {
         success: false,
         message: "Bad Request. Missing or invalid JSON body.",
       });
+
       return;
     }
 
@@ -130,21 +149,30 @@ export default async function (
         value === null ||
         (typeof value === "string" && value.trim() === "")
       ) {
-        context.log.warn(`[API] Missing required field: ${name}.`);
+        context.log.warn(
+          `[API] Missing required field: ${name}.`
+        );
+
         context.res = jsonResponse(400, {
           success: false,
           message:
             "Unable to submit your request. Please fill out all required fields.",
         });
+
         return;
       }
 
       if (typeof value !== "string") {
-        context.log.warn(`[API] Field ${name} must be a string.`);
+        context.log.warn(
+          `[API] Field ${name} must be a string.`
+        );
+
         context.res = jsonResponse(400, {
           success: false,
-          message: "Unable to submit your request. Invalid field type.",
+          message:
+            "Unable to submit your request. Invalid field type.",
         });
+
         return;
       }
     }
@@ -155,24 +183,33 @@ export default async function (
       recaptchaToken !== null &&
       typeof recaptchaToken !== "string"
     ) {
-      context.log.warn("[API] Invalid reCAPTCHA token type.");
+      context.log.warn(
+        "[API] Invalid reCAPTCHA token type."
+      );
+
       context.res = jsonResponse(400, {
         success: false,
-        message: "Unable to submit your request. Captcha verification failed.",
+        message:
+          "Unable to submit your request. Captcha verification failed.",
       });
+
       return;
     }
 
     // 7. Sanitize
     const sanitizedFirstName = sanitize(firstName as string);
     const sanitizedLastName = sanitize(lastName as string);
-    const sanitizedEmail = sanitize(email as string).toLowerCase();
+    const sanitizedEmail =
+      sanitize(email as string).toLowerCase();
     const sanitizedCompany = sanitize(company as string);
     const sanitizedCity = sanitize(city as string);
     const sanitizedCountry = sanitize(country as string);
     const sanitizedState = sanitize(state as string);
+
     const sanitizedRecaptchaToken =
-      typeof recaptchaToken === "string" ? recaptchaToken.trim() : "";
+      typeof recaptchaToken === "string"
+        ? recaptchaToken.trim()
+        : "";
 
     // Ensure sanitization did not turn required fields into empty values.
     const sanitizedFields = {
@@ -185,14 +222,20 @@ export default async function (
       state: sanitizedState,
     };
 
-    for (const [name, value] of Object.entries(sanitizedFields)) {
+    for (const [name, value] of Object.entries(
+      sanitizedFields
+    )) {
       if (!value) {
-        context.log.warn(`[API] Field became empty after sanitization: ${name}.`);
+        context.log.warn(
+          `[API] Field became empty after sanitization: ${name}.`
+        );
+
         context.res = jsonResponse(400, {
           success: false,
           message:
             "Unable to submit your request. Please provide valid information.",
         });
+
         return;
       }
     }
@@ -207,45 +250,78 @@ export default async function (
       sanitizedCountry.length > 100 ||
       sanitizedState.length > 100
     ) {
-      context.log.warn("[API] Input exceeds maximum character limits.");
+      context.log.warn(
+        "[API] Input exceeds maximum character limits."
+      );
+
       context.res = jsonResponse(400, {
         success: false,
-        message: "Unable to submit your request. Input size exceeds limit.",
+        message:
+          "Unable to submit your request. Input size exceeds limit.",
       });
+
       return;
     }
 
     // 9. Email validation
     if (!EMAIL_REGEX.test(sanitizedEmail)) {
-      context.log.warn("[API] Invalid email format.");
+      context.log.warn(
+        "[API] Invalid email format."
+      );
+
       context.res = jsonResponse(400, {
         success: false,
         message:
           "Unable to submit your request. Please provide a valid email address.",
       });
+
       return;
     }
 
-    // 10. CAPTCHA verification.
-    // This is an independent Google reCAPTCHA v2 verification performed by the backend.
-    // The secret never leaves the server.
-    const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY?.trim();
+    // ============================================================
+    // 10. CAPTCHA verification
+    // ============================================================
+
+    const recaptchaSecret =
+      process.env.RECAPTCHA_SECRET_KEY?.trim();
+
+    // Diagnostic information.
+    // IMPORTANT: Never log the actual secret.
+    context.log(
+      "[API] reCAPTCHA secret configured:",
+      !!recaptchaSecret
+    );
+
+    context.log(
+      "[API] reCAPTCHA secret length:",
+      recaptchaSecret?.length ?? 0
+    );
 
     if (!recaptchaSecret) {
-      context.log.error("[API] RECAPTCHA_SECRET_KEY is not configured.");
+      context.log.error(
+        "[API] RECAPTCHA_SECRET_KEY is not configured."
+      );
+
       context.res = jsonResponse(500, {
         success: false,
-        message: "Unable to submit your request. Please try again later.",
+        message:
+          "Unable to submit your request. Please try again later.",
       });
+
       return;
     }
 
     if (!sanitizedRecaptchaToken) {
-      context.log.warn("[API] No reCAPTCHA token provided.");
+      context.log.warn(
+        "[API] No reCAPTCHA token provided."
+      );
+
       context.res = jsonResponse(400, {
         success: false,
-        message: "Unable to submit your request. Captcha verification failed.",
+        message:
+          "Unable to submit your request. Captcha verification failed.",
       });
+
       return;
     }
 
@@ -260,7 +336,8 @@ export default async function (
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type":
+              "application/x-www-form-urlencoded",
           },
           body: verifyBody.toString(),
           signal: AbortSignal.timeout(5000),
@@ -271,149 +348,274 @@ export default async function (
         context.log.warn(
           `[API] reCAPTCHA verification service returned HTTP ${recaptchaResponse.status}.`
         );
+
         context.res = jsonResponse(502, {
           success: false,
-          message: "Unable to verify the security check. Please try again.",
+          message:
+            "Unable to verify the security check. Please try again.",
         });
+
         return;
       }
 
-      const recaptchaData = (await recaptchaResponse.json()) as {
-        success?: boolean;
-        hostname?: string;
-        ["error-codes"]?: string[];
-      };
+      const recaptchaData =
+        (await recaptchaResponse.json()) as {
+          success?: boolean;
+          hostname?: string;
+          ["error-codes"]?: string[];
+        };
+
+      // IMPORTANT:
+      // Log Google's error codes so we can diagnose the problem.
+      // Never log the secret or the actual CAPTCHA token.
+      context.log("[API] reCAPTCHA verification result:", {
+        success: recaptchaData.success,
+        hostname: recaptchaData.hostname,
+        errorCodes: recaptchaData["error-codes"],
+      });
 
       if (!recaptchaData.success) {
-        context.log.warn("[API] Google reCAPTCHA verification failed.");
+        context.log.warn(
+          "[API] Google reCAPTCHA verification failed."
+        );
+
         context.res = jsonResponse(400, {
           success: false,
-          message: "Unable to submit your request. Captcha verification failed.",
+          message:
+            "Unable to submit your request. Captcha verification failed.",
         });
+
         return;
       }
 
-      // For production, verify hostname against the actual registered domain.
-      // Local development can use localhost only if the Google key is configured for it.
+      // ============================================================
+      // Allowed reCAPTCHA hostnames
+      // ============================================================
+
       const allowedHosts = new Set([
+        // Current Azure Static Web Apps domain
+        "purple-plant-04fe042007.azurestaticapps.net",
+
+        // Production custom domain
         "pdfmasterpro.shop",
         "www.pdfmasterpro.shop",
+
+        // Local development
         "localhost",
         "127.0.0.1",
       ]);
 
       if (
         recaptchaData.hostname &&
-        !allowedHosts.has(recaptchaData.hostname.toLowerCase())
+        !allowedHosts.has(
+          recaptchaData.hostname.toLowerCase()
+        )
       ) {
         context.log.warn(
           `[API] Unexpected reCAPTCHA hostname: ${recaptchaData.hostname}`
         );
+
         context.res = jsonResponse(400, {
           success: false,
-          message: "Unable to submit your request. Captcha verification failed.",
+          message:
+            "Unable to submit your request. Captcha verification failed.",
         });
+
         return;
       }
+
+      context.log(
+        "[API] reCAPTCHA verification successful."
+      );
     } catch (error) {
       context.log.error(
         "[API] reCAPTCHA verification request failed:",
-        error instanceof Error ? error.message : error
+        error instanceof Error
+          ? error.message
+          : error
       );
+
       context.res = jsonResponse(502, {
         success: false,
-        message: "Unable to verify the security check. Please try again.",
+        message:
+          "Unable to verify the security check. Please try again.",
       });
+
       return;
     }
 
-    // 11. Validate Salesforce configuration.
-    const salesforceUrl = getRequiredEnv("SALESFORCE_WEB_TO_LEAD_URL");
-    const salesforceOid = getRequiredEnv("SALESFORCE_OID");
-    const salesforceLeadSource = getRequiredEnv("SALESFORCE_LEAD_SOURCE");
-    const returnUrl = getRequiredEnv("SALESFORCE_RETURN_URL");
+    // ============================================================
+    // 11. Validate Salesforce configuration
+    // ============================================================
+
+    const salesforceUrl = getRequiredEnv(
+      "SALESFORCE_WEB_TO_LEAD_URL"
+    );
+
+    const salesforceOid = getRequiredEnv(
+      "SALESFORCE_OID"
+    );
+
+    const salesforceLeadSource = getRequiredEnv(
+      "SALESFORCE_LEAD_SOURCE"
+    );
+
+    const returnUrl = getRequiredEnv(
+      "SALESFORCE_RETURN_URL"
+    );
 
     // Only allow the configured Salesforce Web-to-Lead endpoint.
     if (
       salesforceUrl !==
       "https://webto.salesforce.com/servlet/servlet.WebToLead"
     ) {
-      throw new Error("Invalid Salesforce Web-to-Lead endpoint configuration.");
+      throw new Error(
+        "Invalid Salesforce Web-to-Lead endpoint configuration."
+      );
     }
 
-    // 12. Duplicate check BEFORE Salesforce submission, but do not mark it yet.
-    if (hasRecentSubmission(sanitizedEmail, sanitizedCompany)) {
+    // ============================================================
+    // 12. Duplicate check
+    // ============================================================
+
+    if (
+      hasRecentSubmission(
+        sanitizedEmail,
+        sanitizedCompany
+      )
+    ) {
       context.log.warn(
         `[API] Recent duplicate submission detected for email domain: ...${
           sanitizedEmail.split("@")[1] || "unknown"
         }`
       );
+
       context.res = jsonResponse(409, {
         success: false,
         message:
           "Your request was already submitted recently. Please do not submit duplicate requests.",
       });
+
       return;
     }
 
-    // 13. Build Salesforce Web-to-Lead parameters.
+    // ============================================================
+    // 13. Build Salesforce Web-to-Lead parameters
+    // ============================================================
+
     const sfParams = new URLSearchParams();
+
     sfParams.append("oid", salesforceOid);
     sfParams.append("retURL", returnUrl);
-    sfParams.append("lead_source", salesforceLeadSource);
-    sfParams.append("first_name", sanitizedFirstName);
-    sfParams.append("last_name", sanitizedLastName);
-    sfParams.append("email", sanitizedEmail);
-    sfParams.append("company", sanitizedCompany);
-    sfParams.append("city", sanitizedCity);
-    sfParams.append("country_code", sanitizedCountry);
-    sfParams.append("state_code", sanitizedState);
+    sfParams.append(
+      "lead_source",
+      salesforceLeadSource
+    );
 
-    // Preserve the Salesforce Web-to-Lead CAPTCHA token.
-    sfParams.append("g-recaptcha-response", sanitizedRecaptchaToken);
+    sfParams.append(
+      "first_name",
+      sanitizedFirstName
+    );
 
-    context.log("[API] Submitting lead to Salesforce endpoint.");
+    sfParams.append(
+      "last_name",
+      sanitizedLastName
+    );
 
-    // 14. Submit to Salesforce.
-    const response = await fetch(salesforceUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: sfParams.toString(),
-      signal: AbortSignal.timeout(10_000),
-    });
+    sfParams.append(
+      "email",
+      sanitizedEmail
+    );
+
+    sfParams.append(
+      "company",
+      sanitizedCompany
+    );
+
+    sfParams.append(
+      "city",
+      sanitizedCity
+    );
+
+    sfParams.append(
+      "country_code",
+      sanitizedCountry
+    );
+
+    sfParams.append(
+      "state_code",
+      sanitizedState
+    );
+
+    // Preserve Salesforce Web-to-Lead CAPTCHA token.
+    sfParams.append(
+      "g-recaptcha-response",
+      sanitizedRecaptchaToken
+    );
+
+    context.log(
+      "[API] Submitting lead to Salesforce endpoint."
+    );
+
+    // ============================================================
+    // 14. Submit to Salesforce
+    // ============================================================
+
+    const response = await fetch(
+      salesforceUrl,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded",
+        },
+        body: sfParams.toString(),
+        signal: AbortSignal.timeout(10_000),
+      }
+    );
 
     if (!response.ok) {
       context.log.warn(
         `[API] Salesforce Web-to-Lead returned HTTP ${response.status}.`
       );
+
       context.res = jsonResponse(502, {
         success: false,
-        message: "Unable to submit your request. Please try again later.",
+        message:
+          "Unable to submit your request. Please try again later.",
       });
+
       return;
     }
 
     // Mark duplicate only after successful Salesforce submission.
-    rememberSuccessfulSubmission(sanitizedEmail, sanitizedCompany);
+    rememberSuccessfulSubmission(
+      sanitizedEmail,
+      sanitizedCompany
+    );
 
-    context.log("[API] Lead submitted successfully to Salesforce.");
+    context.log(
+      "[API] Lead submitted successfully to Salesforce."
+    );
 
     context.res = jsonResponse(200, {
       success: true,
-      message: "Your request has been submitted successfully.",
+      message:
+        "Your request has been submitted successfully.",
     });
   } catch (error) {
     // Never return internal error details/configuration to the browser.
     context.log.error(
       "[API] Error submitting lead to Salesforce:",
-      error instanceof Error ? error.message : error
+      error instanceof Error
+        ? error.message
+        : error
     );
 
     context.res = jsonResponse(500, {
       success: false,
-      message: "Unable to submit your request. Please try again.",
+      message:
+        "Unable to submit your request. Please try again.",
     });
   }
 }
