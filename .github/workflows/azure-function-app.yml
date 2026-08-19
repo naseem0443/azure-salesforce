@@ -13,6 +13,7 @@ on:
 env:
   AZURE_FUNCTIONAPP_NAME: "func-pdfmasterpro-prod"
   AZURE_FUNCTIONAPP_PACKAGE_PATH: "api"
+  AZURE_RESOURCE_GROUP: "rg-pdfmasterpro-prod"
   NODE_VERSION: "22.x"
 
 permissions:
@@ -54,6 +55,23 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure subscription
+        run: |
+          echo "Azure account:"
+          az account show \
+            --query "{subscriptionId:id,tenantId:tenantId,name:name}" \
+            -o table
+
+      - name: Verify Function App
+        run: |
+          echo "Checking Function App..."
+
+          az functionapp show \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ env.AZURE_FUNCTIONAPP_NAME }}" \
+            --query "{name:name,resourceGroup:resourceGroup,location:location,kind:kind,state:state}" \
+            -o table
 
       - name: Deploy to Azure Function App
         uses: Azure/functions-action@v1
