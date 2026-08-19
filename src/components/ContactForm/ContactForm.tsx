@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { submitLead } from "../../services/leadApi";
 import { LeadPayload } from "../../types/lead";
@@ -66,42 +66,6 @@ export default function ContactForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [recaptchaToken, setRecaptchaToken] = useState("");
-  const [useMockCaptcha, setUseMockCaptcha] = useState(false);
-
-  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-  const isRealCaptchaConfigured = siteKey && siteKey !== "TODO_REQUIRED_CONFIGURATION" && siteKey !== "";
-
-  // 1. Google reCAPTCHA script loader
-  useEffect(() => {
-    if (isRealCaptchaConfigured) {
-      const scriptId = "recaptcha-google-script";
-      if (!document.getElementById(scriptId)) {
-        const script = document.createElement("script");
-        script.id = scriptId;
-        script.src = "https://www.google.com/recaptcha/api.js";
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
-      }
-
-      // Bind global callback
-      (window as any).onRecaptchaSuccess = (token: string) => {
-        setRecaptchaToken(token);
-        setErrors(prev => ({ ...prev, recaptcha: "" }));
-      };
-
-      (window as any).onRecaptchaExpired = () => {
-        setRecaptchaToken("");
-      };
-    }
-
-    return () => {
-      // Clean up global bindings if component unmounts
-      delete (window as any).onRecaptchaSuccess;
-      delete (window as any).onRecaptchaExpired;
-    };
-  }, [isRealCaptchaConfigured, siteKey]);
 
   // Handle Input Changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -165,12 +129,7 @@ export default function ContactForm() {
       }
     }
 
-    // Captcha validation
-    if (isRealCaptchaConfigured && !recaptchaToken && !useMockCaptcha) {
-      newErrors.recaptcha = "Please verify that you are not a robot.";
-    } else if (!isRealCaptchaConfigured && !useMockCaptcha) {
-      newErrors.recaptcha = "Configuration check: Click the mock check-box to bypass local testing.";
-    }
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -201,8 +160,7 @@ export default function ContactForm() {
       company: formData.company.trim(),
       city: formData.city.trim(),
       country: finalCountry,
-      state: finalState,
-      recaptchaToken: isRealCaptchaConfigured ? recaptchaToken : (useMockCaptcha ? "mock_sandbox_token" : undefined)
+      state: finalState
     };
 
     try {
@@ -428,47 +386,6 @@ export default function ContactForm() {
               </div>
             )}
 
-            {/* Google reCAPTCHA widget / sandbox emulator */}
-            <div className="form-group full-width">
-              <label className="form-label">
-                Security Verification<span className="required-star">*</span>
-              </label>
-              
-              <div className="captcha-container">
-                {isRealCaptchaConfigured ? (
-                  /* Google reCAPTCHA widget node */
-                  <div 
-                    className="g-recaptcha" 
-                    data-sitekey={siteKey}
-                    data-callback="onRecaptchaSuccess"
-                    data-expired-callback="onRecaptchaExpired"
-                    data-theme="dark"
-                  ></div>
-                ) : (
-                  /* Dev/Sandbox Mock Captcha Trigger */
-                  <div className="recaptcha-placeholder">
-                    <div className="placeholder-title">reCAPTCHA Local Sandbox</div>
-                    <div className="placeholder-text">
-                      VITE_RECAPTCHA_SITE_KEY is not configured yet. 
-                    </div>
-                    <label className="mock-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={useMockCaptcha}
-                        onChange={(e) => {
-                          setUseMockCaptcha(e.target.checked);
-                          if (errors.recaptcha) setErrors(prev => ({ ...prev, recaptcha: "" }));
-                        }}
-                        className="mock-checkbox"
-                        disabled={isSubmitting}
-                      />
-                      I am not a robot (Mock Challenge)
-                    </label>
-                  </div>
-                )}
-                {errors.recaptcha && <span className="error-message">{errors.recaptcha}</span>}
-              </div>
-            </div>
           </div>
 
           <button

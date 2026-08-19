@@ -21,8 +21,6 @@ vi.mock("react-router-dom", async () => {
 describe("Frontend Component - ContactForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default environment variable stubbing for Vite config
-    vi.stubEnv("VITE_RECAPTCHA_SITE_KEY", "TODO_REQUIRED_CONFIGURATION");
   });
 
   afterEach(() => {
@@ -131,10 +129,6 @@ describe("Frontend Component - ContactForm", () => {
     fireEvent.change(screen.getByLabelText(/Country/i), { target: { value: "IN" } });
     fireEvent.change(screen.getByRole("combobox", { name: /State\/Province/i }), { target: { value: "DL" } });
 
-    // Bypass Captcha via Mock Checkbox in Local Sandbox mode
-    const mockCaptchaCheck = screen.getByLabelText(/I am not a robot \(Mock Challenge\)/i);
-    fireEvent.click(mockCaptchaCheck);
-
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /Submit Lead Form/i }));
 
@@ -147,8 +141,7 @@ describe("Frontend Component - ContactForm", () => {
         company: "pdfmasterpro.shop",
         city: "New Delhi",
         country: "IN",
-        state: "DL",
-        recaptchaToken: "mock_sandbox_token"
+        state: "DL"
       });
       expect(mockNavigate).toHaveBeenCalledWith("/thank-you");
     });
@@ -170,7 +163,6 @@ describe("Frontend Component - ContactForm", () => {
     fireEvent.change(screen.getByLabelText(/City/i), { target: { value: "New Delhi" } });
     fireEvent.change(screen.getByLabelText(/Country/i), { target: { value: "IN" } });
     fireEvent.change(screen.getByRole("combobox", { name: /State\/Province/i }), { target: { value: "DL" } });
-    fireEvent.click(screen.getByLabelText(/I am not a robot \(Mock Challenge\)/i));
 
     // Submit
     fireEvent.click(screen.getByRole("button", { name: /Submit Lead Form/i }));

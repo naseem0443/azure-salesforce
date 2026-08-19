@@ -47,7 +47,7 @@ describe("Backend API - /api/lead Handler", () => {
     vi.stubEnv("SALESFORCE_WEB_TO_LEAD_URL", "https://webto.salesforce.com/servlet/servlet.WebToLead");
     vi.stubEnv("SALESFORCE_OID", "00Dbm00000uN5YG");
     vi.stubEnv("SALESFORCE_LEAD_SOURCE", "Web");
-    vi.stubEnv("RECAPTCHA_SECRET_KEY", "TODO_REQUIRED_CONFIGURATION"); // Disabled by default for simplicity unless set
+    vi.stubEnv("SALESFORCE_RETURN_URL", "https://pdfmasterpro.shop/thank-you");
     vi.spyOn(globalThis, "fetch");
   });
 
@@ -213,10 +213,10 @@ describe("Backend API - /api/lead Handler", () => {
 
     await leadHandler(context, req);
 
-    expect(context.res?.status).toBe(500);
+    expect(context.res?.status).toBe(502);
     expect(context.res?.body).toEqual({
       success: false,
-      message: "Unable to submit your request. Please try again."
+      message: "Unable to submit your request. Please try again later."
     });
   });
 
@@ -336,6 +336,6 @@ describe("Backend API - /api/lead Handler", () => {
     
     expect(context2.res?.status).toBe(409);
     expect(context2.res?.body?.success).toBe(false);
-    expect(context2.res?.body?.message).toContain("already being processed");
+    expect(context2.res?.body?.message).toContain("already submitted recently");
   });
 });

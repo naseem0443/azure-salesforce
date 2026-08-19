@@ -37,8 +37,7 @@ Create a `.env` file at the root of the project (excluded from Git). Below are t
 | `SALESFORCE_WEB_TO_LEAD_URL` | Server | Yes | The Salesforce Web-to-Lead POST URL endpoint. |
 | `SALESFORCE_OID` | Server | Yes | The 15-character Salesforce Organization ID (`00Dbm00000uN5YG`). |
 | `SALESFORCE_LEAD_SOURCE` | Server | Yes | Lead source parameter (default: `Web`). |
-| `VITE_RECAPTCHA_SITE_KEY` | Browser | Yes | Google reCAPTCHA v2 public Site Key for the frontend widget. |
-| `RECAPTCHA_SECRET_KEY` | Server | Optional | Private secret key used to double-verify captcha tokens server-side. |
+
 | `PORT` | Local Server | No | Local emulator port (default: `7071`). |
 | `CORS_ALLOWED_ORIGINS` | Local Server | No | Allowed CORS origin (default: `http://localhost:5173`). |
 
@@ -85,9 +84,7 @@ Copy the example environment file and fill in the values:
 ```bash
 cp .env.example .env
 ```
-Open `.env` and configure your settings:
-- Update `VITE_RECAPTCHA_SITE_KEY` with your Google reCAPTCHA v2 site key (optional for local testing, as a sandbox toggle is provided).
-- Update `RECAPTCHA_SECRET_KEY` if you wish to verify the captcha tokens backend-side.
+Open `.env` and verify your settings. Defaults are preconfigured for local dev ports.
 
 ### 2. Start Application (Frontend + Backend)
 Run the concurrent development server from the root directory:
@@ -170,7 +167,6 @@ To verify that the lead has arrived inside your Salesforce account:
 
 Before deploying this application to Azure Static Web Apps:
 
-- [ ] Obtain the production Google reCAPTCHA v2 Site Key and set it in your hosting platform under App Settings as `VITE_RECAPTCHA_SITE_KEY`.
-- [ ] Set your production Google reCAPTCHA v2 Secret Key in your Function App configuration as `RECAPTCHA_SECRET_KEY`.
+
 - [ ] Configure `SALESFORCE_OID` (`00Dbm00000uN5YG`) in the Azure Function App environment variables.
 - [ ] Ensure Azure Static Web Apps is configured with `api_location: "api"` and `app_location: "/"`.

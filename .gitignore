@@ -10,7 +10,7 @@ coverage/
 dist/
 build/
 
-# Local env files (highly critical: contains Salesforce OID, reCAPTCHA secrets)
+# Local env files (highly critical: contains Salesforce configuration)
 .env
 .env.local
 .env.development.local
